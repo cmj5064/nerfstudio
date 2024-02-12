@@ -36,7 +36,8 @@ from nerfstudio.data.utils.dataparsers_utils import (
 from nerfstudio.utils.io import load_from_json
 from nerfstudio.utils.rich_utils import CONSOLE
 
-MAX_AUTO_RESOLUTION = 1600
+# MAX_AUTO_RESOLUTION = 1600
+MAX_AUTO_RESOLUTION = 1000 # NOTE: changed due to OOM killed
 
 
 @dataclass
