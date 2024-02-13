@@ -150,12 +150,14 @@ def convert_video_to_images(
             CONSOLE.print("[bold red]Error: Invalid crop factor. All crops must be in [0,1].")
             sys.exit(1)
 
-    if video_path.is_dir():
-        CONSOLE.print(f"[bold red]Error: Video path is a directory, not a path: {video_path}")
-        sys.exit(1)
-    if video_path.exists() is False:
-        CONSOLE.print(f"[bold red]Error: Video does not exist: {video_path}")
-        sys.exit(1)
+    if "https:" not in str(video_path): # if not url, path
+        if video_path.is_dir():
+            CONSOLE.print(f"[bold red]Error: Video path is a directory, not a path: {video_path}")
+            sys.exit(1)
+        if video_path.exists() is False:
+            CONSOLE.print(f"[bold red]Error: Video does not exist: {video_path}")
+            sys.exit(1)
+    # else url, continue
 
     with status(msg="Converting video to images...", spinner="bouncingBall", verbose=verbose):
         num_frames = get_num_frames_in_video(video_path)
