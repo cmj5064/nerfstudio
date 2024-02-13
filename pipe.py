@@ -24,8 +24,8 @@ def main(args):
         uniq += 1
 
     # ns-process-data
-    os.system(f'ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
-    # TODO os.popopen(f'ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
+    os.system(f'source activate nerfstudio && ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
+    # TODO os.popopen(f'source activate nerfstudio && ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
     get_matching_summary = ''   # TODO process-data에서 출력이나 flag 받아와야 함
     msg = f'{get_matching_summary} \
         공간 모델 학습 수행 중 \
@@ -33,7 +33,7 @@ def main(args):
     # TODO 웹 서버로 msg 전송
 
     # ns-train
-    os.system(f'ns-train {model} --data {base}/data/{name} --pipeline.model.predict-normals True --vis wandb')
+    os.system(f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --pipeline.model.predict-normals True --vis wandb')
     msg = '3차원 공간 추출 중 \
         약 10분이 소요됩니다.'
     # TODO 웹 서버로 msg 전송
@@ -42,7 +42,7 @@ def main(args):
     output_dir = outs_dir + sorted(os.listdir(outs_dir))[-1]
 
     # ns-export
-    os.system(f'ns-export pointcloud \
+    os.system(f'source activate nerfstudio && ns-export pointcloud \
     --load-config {output_dir}/config.yml \
     --output-dir {output_dir}/exports/pcd_10000000_s_20/ \
     --num-points 10000000 \
