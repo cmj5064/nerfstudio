@@ -5,6 +5,7 @@ from datetime import timedelta
 import json
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
+import json
 
 
 def send(name, file, id):
@@ -12,7 +13,6 @@ def send(name, file, id):
     ply_file = MultipartEncoder(
         fields={
             'file': (f'{name}.ply', open(file, 'rb'))
-            # 'file': (f'{name}.png', open(file, 'rb')) # NOTE request test
         }
     )
     data = {"file": ply_file, "id": id}
@@ -25,7 +25,10 @@ def main(args):
         약 30분이 소요됩니다.'    # user에게 보여줄 메시지
     # TODO 웹 서버로 msg 전송
 
-    base = os.getcwd()                 # pwd output. ./nerfstudio
+    base = os.getcwd()
+    if 'nerfstudio' not in base:
+        base = f'{base}/nerfstudio' # pwd output. ./nerfstudio
+
     model = args.model                 # nerfacto
     if "https:" in args.src:
         data_url = args.src                # https://zzimkong.ggm.kr/2024.mov
@@ -83,31 +86,24 @@ def main(args):
     print("web server로 전송 중")
     send_start = time.time()
     send(name, f'{output_dir}/exports/pcd_10000000_s_20/point_cloud.ply', args.id)
-    # send(name, '/home/cmj.gcp.2/nerfstudio/data/test/images_8/frame_00001.png', args.id) # NOTE request test
     print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
 
 
 
 if __name__ == "__main__":
     # ----- Parser -----
-    cli_parser = argparse.ArgumentParser(
-        description='configuration arguments provided at run time from the CLI'
-    )
-
-    cli_parser.add_argument(
-        '-c',
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-dc',
         '--config_file',
         dest='config_file',
         type=str,
-        default='./config.json',
+        default='',
         help='config file',
     )
-
-    args, unknown = cli_parser.parse_known_args()
-
-    # parser = argparse.ArgumentParser()
-    parser = argparse.ArgumentParser(parents=[cli_parser], add_help=False)
-
+    parser.add_argument('--id',
+                        type=int, 
+                        help='(Required) id.')
     parser.add_argument('--src',
                         type=str, 
                         help='(Required) user data name.')
@@ -116,20 +112,11 @@ if __name__ == "__main__":
                         help='(Required) model.',
                         default="nerfacto")
 
-    # The escaping of "\t" in the config file is necesarry as
-    # otherwise Python will try to treat is as the string escape
-    # sequence for ASCII Horizontal Tab when it encounters it
-    # during json.load
-    config = json.load(open(args.config_file))
-    parser.set_defaults(**config)
-
-    [
-        parser.add_argument(arg)
-        for arg in [arg for arg in unknown if arg.startswith('--')]
-        if arg.split('--')[-1] in config
-    ]
-
     # Parse arguments
     args = parser.parse_args()
+    config = json.loads(args.config_file) # dict
+
+    args.id = config["id"]
+    args.src = config["src"]
     print(args)
     main(args)
