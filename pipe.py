@@ -56,7 +56,7 @@ def main(args):
     # TODO 웹 서버로 msg 전송
 
     # ns-train
-    os.system(f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --pipeline.model.predict-normals True --vis wandb')
+    os.system(f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis wandb')
     msg = '3차원 공간 추출 중 \
         약 10분이 소요됩니다.'
     # TODO 웹 서버로 msg 전송
