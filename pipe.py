@@ -10,15 +10,16 @@ import subprocess as sp
 import sys
 
 
-def send(name, file, id):
+def upload(name, file, id):
     url = "https://zzimkong.ggm.kr/inference/upload"
     ply_file = MultipartEncoder(
         fields={
-            'file': (f'{name}.ply', open(file, 'rb'))
+            'file': (f'{name}.ply', open(file, 'rb')),
+            'id': str(id)
         }
     )
-    data = {"file": ply_file, "id": id}
-    r = requests.post(url, data=data, verify=False)
+    headers = {'Content-Type' : ply_file.content_type}              # multipart/form-data
+    r = requests.post(url, headers=headers, data=ply_file, verify=False)
     return r.status_code
 
 
@@ -29,8 +30,8 @@ def status(status, message, id):
 
 def main(args):
     start = time.time()
-    msg = '공간 영상 전처리 수행 중 \
-        약 30분이 소요됩니다.'    # user에게 보여줄 메시지
+    msg = '업로드 된 공간 영상을 전처리 중입니다. \
+        (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
     status("progress", msg, args.id)
 
     base = os.getcwd()
@@ -64,23 +65,23 @@ def main(args):
     command = f'source activate nerfstudio && ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
-        status("error", "데이터 전처리 중 에러가 발생하였습니다.", args.id)
+        status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
         os.abort()
     # TODO os.popen(f'source activate nerfstudio && ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
     get_matching_summary = ''   # TODO process-data에서 출력이나 flag 받아와야 함
     msg = f'{get_matching_summary} \
-        공간 모델 학습 수행 중 \
-        약 30분이 소요됩니다.'
+        공간 학습을 진행 중입니다. \
+        (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
 
     # ns-train
     command = f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis wandb'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
-        status("error", "공간 모델 학습 중 에러가 발생하였습니다.", args.id)
+        status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
         os.abort()
-    msg = '3차원 공간 추출 중 \
-        약 10분이 소요됩니다.'
+    msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \
+        (재구성에는 약 10분이 소요됩니다!)'
     status("progress", msg, args.id)
 
     outs_dir=f"{base}/outputs/{name}/{model}/"
@@ -100,23 +101,24 @@ def main(args):
     --obb_scale 20.0000000000 20.0000000000 20.0000000000'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
-        status("error", "공간 추출 중 에러가 발생하였습니다.", args.id)
+        status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
         os.abort()
 
     print("Point cloud exported!")
     print(f"Elapsed time: {timedelta(seconds=time.time() - start)}")
 
-    msg = '공간 추출이 완료되었습니다!'
+    msg = '공간 재구성이 완료되었습니다! 재구성 결과를 서버에 업로드 중입니다.'
     status("progress", msg, args.id)
 
     print("web server로 전송 중")
     send_start = time.time()
-    result = send(name, f'{output_dir}/exports/pcd_10000000_s_20/point_cloud.ply', args.id)
+    result = upload(name, f'{output_dir}/exports/pcd_10000000_s_20/point_cloud.ply', args.id)
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-        status("progress", "ply 전송이 완료되었습니다.", args.id)
+        status("progress", "업로드가 완료되었습니다.", args.id)
     else:
-        status("error", "ply 전송에 실패하였습니다.", args.id)
+        status("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
+        os.abort()
 
 
 if __name__ == "__main__":
