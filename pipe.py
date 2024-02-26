@@ -103,8 +103,8 @@ def main(args):
         status("error", msg, args.id)
         os.abort()
 
-    msg = f'{get_matching_summary} \n \
-    전처리가 완료되어 공간 학습을 진행 중입니다. \n \
+    msg = f'{get_matching_summary} \n\
+    전처리가 완료되어 공간 학습을 진행 중입니다. \n\
     (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
 
@@ -117,7 +117,7 @@ def main(args):
         status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
         os.abort()
     msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
-        (재구성에는 약 10분이 소요됩니다!)'
+    (재구성에는 약 10분이 소요됩니다!)'
     status("progress", msg, args.id)
 
     outs_dir=f"{base}/outputs/{name}/{model}/"
