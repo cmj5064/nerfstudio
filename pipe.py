@@ -74,7 +74,7 @@ def main(args):
         name = f'{name_0}{str(uniq)}'
         uniq += 1
 
-    # TODO: ffmpeg pix_fmt none이라 url 사용 불가
+    # TODO: ffmpeg pix_fmt none이라 url 사용 불가 / process_data_utils.py convert_video_to_images
     # wget
     if not os.path.exists(f'{base}/data/{name}'):
         os.mkdir(f'{base}/data/{name}')
@@ -104,7 +104,7 @@ def main(args):
         os.abort()
 
     msg = f'{get_matching_summary} \
-        전치리가 완료되어 공간 학습을 진행 중입니다. \
+        전처리가 완료되어 공간 학습을 진행 중입니다. \
         (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
 
