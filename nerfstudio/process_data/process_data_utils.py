@@ -104,8 +104,10 @@ def get_num_frames_in_video(video: Path) -> int:
     Returns:
         The number of frames in a video.
     """
+    # cmd = f'ffprobe -v error -select_streams v:0 -count_packets \
+    #         -show_entries stream=nb_read_packets -of csv=p=0 "{video}"'
     cmd = f'ffprobe -v error -select_streams v:0 -count_packets \
-            -show_entries stream=nb_read_packets -of csv=p=0 "{video}"'
+            -show_entries stream=nb_frames -of csv=p=0 "{video}"'
     output = run_command(cmd)
     assert output is not None
     number_match = re.search(r"\d+", output)
