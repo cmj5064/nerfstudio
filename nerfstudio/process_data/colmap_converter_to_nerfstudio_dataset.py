@@ -139,6 +139,11 @@ class ColmapConverterToNerfstudioDataset(BaseConverterToNerfstudioDataset):
                 )
                 summary_log.append(f"Colmap matched {num_matched_frames} images")
             summary_log.append(colmap_utils.get_matching_summary(num_frames, num_matched_frames))
+            ## colmap 결과 저장
+            txt_file = open(f"{self.output_dir}/colmap_result.txt", "w")
+            content = colmap_utils.get_matching_summary(num_frames, num_matched_frames)
+            txt_file.write(content)
+            txt_file.close()
 
         else:
             CONSOLE.log(

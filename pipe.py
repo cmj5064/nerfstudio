@@ -85,7 +85,7 @@ def main(args):
     f.close()
     get_matching_summary = line.split(']')[-1]
     thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', id)
-    msg = f'{get_matching_summary} \
+    msg = f'전처리 완료: {get_matching_summary} \
         공간 학습을 진행 중입니다. \
         (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
