@@ -43,8 +43,8 @@ def status(status, message, id):
 
 def main(args):
     start = time.time()
-    msg = '업로드 된 공간 영상을 전처리 중입니다. \
-        (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
+    msg = '업로드 된 공간 영상을 전처리 중입니다. \n\
+    (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
     status("progress", msg, args.id)
 
     base = os.getcwd()
@@ -97,15 +97,15 @@ def main(args):
         matching = float(line.split('%')[0][-5:])
     # 매칭률 50% 미만일 경우 더 이상 진행 안 함
     if matching < float(50):
-        msg = f'{get_matching_summary} \
-            전처리 수행 결과 학습 가능한 프레임이 전체의 50% 미만으로 공간 재구성을 진행하기 어렵습니다. \
-            상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
+        msg = f'{get_matching_summary} \n\
+        전처리 수행 결과 학습 가능한 프레임이 전체의 50% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
+        상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
         status("error", msg, args.id)
         os.abort()
 
-    msg = f'{get_matching_summary} \
-        전처리가 완료되어 공간 학습을 진행 중입니다. \
-        (학습에는 약 30분이 소요됩니다!)'
+    msg = f'{get_matching_summary} \n \
+    전처리가 완료되어 공간 학습을 진행 중입니다. \n \
+    (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
 
     thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', args.id)
@@ -116,7 +116,7 @@ def main(args):
     if s.returncode != 0:
         status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
         os.abort()
-    msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \
+    msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
         (재구성에는 약 10분이 소요됩니다!)'
     status("progress", msg, args.id)
 
