@@ -23,6 +23,19 @@ def upload(name, file, id):
     return r.status_code
 
 
+def thumbnail(name, file, id):
+    url = "https://zzimkong.ggm.kr/inference/upload/thumbnail"
+    png_file = MultipartEncoder(
+        fields={
+            'thumbnail': (f'{name}.png', open(file, 'rb')),
+            'id': str(id)
+        }
+    )
+    headers = {'Content-Type' : png_file.content_type}              # multipart/form-data
+    r = requests.post(url, headers=headers, data=png_file, verify=False)
+    return r.status_code
+
+
 def status(status, message, id):
     url = "https://zzimkong.ggm.kr/inference/status"
     data = {"status": status, "statusMessage": message, "id": id}
@@ -67,8 +80,11 @@ def main(args):
     if s.returncode != 0:
         status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
         os.abort()
-    # TODO os.popen(f'source activate nerfstudio && ns-process-data video --data {base}/data/{data} --output-dir {base}/data/{name}')
-    get_matching_summary = ''   # TODO process-data에서 출력이나 flag 받아와야 함
+    f = open(f'{base}/data/{name}/colmap_result.txt', 'r')
+    line = f.readline()
+    f.close()
+    get_matching_summary = line.split(']')[-1]
+    thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', id)
     msg = f'{get_matching_summary} \
         공간 학습을 진행 중입니다. \
         (학습에는 약 30분이 소요됩니다!)'
