@@ -168,7 +168,7 @@ def convert_video_to_images(
             sys.exit(1)
         CONSOLE.print("Number of frames in video:", num_frames)
 
-        ffmpeg_cmd = f'ffmpeg -i "{video_path}"'
+        ffmpeg_cmd = f'ffmpeg -i "{video_path}"' # TODO: -pix_fmt yuv420p
 
         crop_cmd = ""
         if crop_factor != (0.0, 0.0, 0.0, 0.0):
