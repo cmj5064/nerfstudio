@@ -5,9 +5,9 @@ from datetime import timedelta
 import json
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
-import json
 import subprocess as sp
 import sys
+import wget
 
 
 def upload(name, file, id):
@@ -63,7 +63,7 @@ def main(args):
     #     name_0 = data.split('.')[0]
 
     # UXR까지는 src로 url이 아닌 파일명만
-    data_url = f'https://zzimkong.ggm.kr/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
+    data_url = f'https://zzimkong.ggm.kr/inference/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
     data = data_url.split('/')[-1]                                  # room.mp4
     name_0 = data.split('.')[0]                                     # room
 
@@ -74,21 +74,41 @@ def main(args):
         name = f'{name_0}{str(uniq)}'
         uniq += 1
 
+    # TODO: ffmpeg pix_fmt none이라 url 사용 불가
+    # wget
+    if not os.path.exists(f'{base}/data/{name}'):
+        os.mkdir(f'{base}/data/{name}')
+    wget.download(data_url, f'{base}/data/{name}/{data}')
+    data_url = f'{base}/data/{name}/{data}'
     # ns-process-data
     command = f'source activate nerfstudio && ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
         os.abort()
+    
     f = open(f'{base}/data/{name}/colmap_result.txt', 'r')
     line = f.readline()
     f.close()
     get_matching_summary = line.split(']')[-1]
-    thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', args.id)
+    if "all" in get_matching_summary:
+        matching = float(100)
+    else:
+        matching = float(line.split('%')[0][-5:])
+    # 매칭률 50% 미만일 경우 더 이상 진행 안 함
+    if matching < float(50):
+        msg = f'{get_matching_summary} \
+            전처리 수행 결과 학습 가능한 프레임이 전체의 50% 미만으로 공간 재구성을 진행하기 어렵습니다. \
+            상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
+        status("error", msg, args.id)
+        os.abort()
+
     msg = f'{get_matching_summary} \
         전치리가 완료되어 공간 학습을 진행 중입니다. \
         (학습에는 약 30분이 소요됩니다!)'
     status("progress", msg, args.id)
+
+    thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', args.id)
 
     # ns-train
     command = f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis wandb'
