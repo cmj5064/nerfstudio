@@ -95,10 +95,11 @@ def main(args):
         matching = float(100)
     else:
         matching = float(line.split('%')[0][-5:])
-    # 매칭률 50% 미만일 경우 더 이상 진행 안 함
-    if matching < float(50):
+    # 매칭률 30% 미만일 경우 더 이상 진행 안 함
+    MATCHING_THRES = 30
+    if matching < float(MATCHING_THRES):
         msg = f'{get_matching_summary} \n\
-        전처리 수행 결과 학습 가능한 프레임이 전체의 50% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
+        전처리 수행 결과 학습 가능한 프레임이 전체의 {MATCHING_THRES}% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
         상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
         status("error", msg, args.id)
         os.abort()
