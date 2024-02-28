@@ -160,9 +160,18 @@ def run_colmap(
         f"--output_path {sparse_dir}",
     ]
     if colmap_version >= Version("3.7"):
-        mapper_cmd.append("--Mapper.ba_global_function_tolerance=1e-6")
+        mapper_cmd.append("--Mapper.ba_global_function_tolerance 1e-6")
+        # NOTE: for faster BA
+        # reference: https://github.com/colmap/colmap/issues/116
+        mapper_cmd.append("--Mapper.ba_global_images_ratio 1.2")
+        mapper_cmd.append("--Mapper.ba_global_points_ratio 1.2")
+        mapper_cmd.append("--Mapper.ba_global_max_num_iterations 10")
+        mapper_cmd.append("--Mapper.ba_global_max_refinements 3")
+        mapper_cmd.append("--Mapper.ba_global_points_freq 200000")
+        # NOTE
 
     mapper_cmd = " ".join(mapper_cmd)
+    CONSOLE.log(mapper_cmd)
 
     with status(
         msg="[bold yellow]Running COLMAP bundle adjustment... (This may take a while)",
