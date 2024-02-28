@@ -119,7 +119,8 @@ class MLP(FieldComponent):
         output_activation_str = activation_to_tcnn_string(out_activation)
         if layer_width in [16, 32, 64, 128]:
             network_config = {
-                "otype": "FullyFusedMLP",
+                # "otype": "FullyFusedMLP", # NOTE: FullyFusedMLP is only supported for GPU architecture 75+.
+                "otype": "CutlassMLP",      # NOTE: for V100 (70)
                 "activation": activation_str,
                 "output_activation": output_activation_str,
                 "n_neurons": layer_width,
