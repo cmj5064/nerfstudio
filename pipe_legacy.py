@@ -81,12 +81,10 @@ def main(args):
     wget.download(data_url, f'{base}/data/{name}/{data}')
     data_url = f'{base}/data/{name}/{data}'
     # ns-process-data
-    command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
+    command = f'source activate nerfstudio && ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
     
     f = open(f'{base}/data/{name}/colmap_result.txt', 'r')
@@ -114,25 +112,20 @@ def main(args):
     thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', args.id)
 
     # ns-train
-    command = f'ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis tensorboard'
+    command = f'source activate nerfstudio && ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis wandb'
     s = sp.run(command, capture_output=False, text=True, shell=True)
-    
-    outs_dir=f"{base}/outputs/{name}/{model}/"
-    output_dir = outs_dir + sorted(os.listdir(outs_dir))[-1]
-
     if s.returncode != 0:
         status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
     msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
     (재구성에는 약 10분이 소요됩니다!)'
     status("progress", msg, args.id)
 
+    outs_dir=f"{base}/outputs/{name}/{model}/"
+    output_dir = outs_dir + sorted(os.listdir(outs_dir))[-1]
+
     # ns-export
-    command = f'ns-export pointcloud \
+    command = f'source activate nerfstudio && ns-export pointcloud \
     --load-config {output_dir}/config.yml \
     --output-dir {output_dir}/exports/pcd_10000000_s_20/ \
     --num-points 10000000 \
@@ -146,10 +139,6 @@ def main(args):
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
     print("Point cloud exported!")
@@ -164,16 +153,8 @@ def main(args):
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
         status("progress", "업로드가 완료되었습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
     else:
         status("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
 
