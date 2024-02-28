@@ -18,7 +18,9 @@ def upload(name, file, id):
             'id': str(id)
         }
     )
-    headers = {'Content-Type' : ply_file.content_type}              # multipart/form-data
+    headers = {'Content-Type' : png_file.content_type,
+               "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"
+    }              # multipart/form-data
     r = requests.post(url, headers=headers, data=ply_file, verify=False)
     return r.status_code
 
@@ -31,7 +33,9 @@ def thumbnail(name, file, id):
             'id': str(id)
         }
     )
-    headers = {'Content-Type' : png_file.content_type}              # multipart/form-data
+    headers = {'Content-Type' : png_file.content_type,
+               "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"
+    }              # multipart/form-data
     r = requests.post(url, headers=headers, data=png_file, verify=False)
     return r.status_code
 
@@ -39,7 +43,8 @@ def thumbnail(name, file, id):
 def status(status, message, id):
     url = "https://zzimkong.ggm.kr/inference/status"
     data = {"status": status, "statusMessage": message, "id": id}
-    r = requests.post(url, data=data, verify=False)
+    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"}
+    r = requests.post(url, headers=headers, data=data, verify=False)
 
 def main(args):
     start = time.time()
@@ -78,7 +83,12 @@ def main(args):
     # wget
     if not os.path.exists(f'{base}/data/{name}'):
         os.mkdir(f'{base}/data/{name}')
-    wget.download(data_url, f'{base}/data/{name}/{data}')
+    # wget.download(data_url, f'{base}/data/{name}/{data}')
+    with open(f'{base}/data/{name}/{data}', "wb") as file:   # open in binary mode
+        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"}
+        response = requests.get(data_url, headers=headers)               # get request
+        file.write(response.content)      # write to file#
+    
     data_url = f'{base}/data/{name}/{data}'
     # ns-process-data
     command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
