@@ -37,10 +37,10 @@ class VideoToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
     """Target number of frames to use per video, results may not be exact."""
     percent_radius_crop: float = 1.0
     """Create circle crop mask. The radius is the percent of the image diagonal."""
-    # matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "sequential"
-    # """Feature matching method to use. Vocab tree is recommended for a balance of speed
-    # and accuracy. Exhaustive is slower but more accurate. Sequential is faster but
-    # should only be used for videos.""" # NOTE: rollback from https://github.com/nerfstudio-project/nerfstudio/pull/2912
+    matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "sequential"
+    """Feature matching method to use. Vocab tree is recommended for a balance of speed
+    and accuracy. Exhaustive is slower but more accurate. Sequential is faster but
+    should only be used for videos.""" # NOTE: rollback from https://github.com/nerfstudio-project/nerfstudio/pull/2912 하고 싶으면 주석처리
 
     def main(self) -> None:
         """Process video into a nerfstudio dataset."""
