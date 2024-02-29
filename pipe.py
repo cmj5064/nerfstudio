@@ -18,7 +18,7 @@ def upload(name, file, id):
             'id': str(id)
         }
     )
-    headers = {'Content-Type' : png_file.content_type,
+    headers = {'Content-Type' : ply_file.content_type,
                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"
     }              # multipart/form-data
     r = requests.post(url, headers=headers, data=ply_file, verify=False)
