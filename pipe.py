@@ -114,6 +114,8 @@ def main(args):
         전처리 수행 결과 학습 가능한 프레임이 전체의 {MATCHING_THRES}% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
         상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
         status("error", msg, args.id)
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
+        s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
     msg = f'{get_matching_summary} \n\
@@ -132,9 +134,7 @@ def main(args):
 
     if s.returncode != 0:
         status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
     msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
@@ -156,9 +156,7 @@ def main(args):
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
@@ -174,15 +172,11 @@ def main(args):
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
         status("progress", "업로드가 완료되었습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
     else:
         status("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
