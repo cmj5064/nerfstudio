@@ -89,8 +89,10 @@ class ScanNetpp(DataParser):
         i_train = []
         i_eval = []
         # sort the frames by fname
-        frames = meta["frames"] + meta["test_frames"]
-        test_frames = [f["file_path"] for f in meta["test_frames"]]
+        # frames = meta["frames"] + meta["test_frames"]
+        # test_frames = [f["file_path"] for f in meta["test_frames"]]
+        frames = meta["frames"]
+        test_frames = []                            # NOTE: test_frames는 resized_images에 포함되어 있지 않아 수정
         frames.sort(key=lambda x: x["file_path"])
 
         for idx, frame in enumerate(frames):
@@ -151,7 +153,8 @@ class ScanNetpp(DataParser):
 
         # in x,y,z order
         # assumes that the scene is centered at the origin
-        if not self.config.auto_scale_poses:
+        # if not self.config.auto_scale_poses:              # NOTE: error at poses[:, :3, 3]: torch.Size([0, 3])
+        if not self.config.auto_scale_poses and poses[:, :3, 3].shape[0] != 0:
             # Set aabb_scale to scene_scale * the max of the absolute values of the poses
             aabb_scale = self.config.scene_scale * float(torch.max(torch.abs(poses[:, :3, 3])))
         else:
