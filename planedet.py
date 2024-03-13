@@ -142,7 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--json', type=str, default="dataparser_transforms.json")
     parser.add_argument('--iteration', type=int, default=2)
     parser.add_argument('--output', type=str, default="result.ply")
-    parser.add_argument('--debug', default=True, action='store_true')
+    parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
     
     if args.iteration < 2:

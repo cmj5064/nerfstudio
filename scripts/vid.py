@@ -50,8 +50,7 @@ def main(args):
     if args.sfm == 'colmap':
         command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
     elif args.sfm == 'hloc':
-        # command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name} --sfm-tool hloc --feature-type superpoint_aachen --matcher-type superglue'
-        command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name} --sfm-tool hloc --feature-type superpoint_inloc --matcher-type superglue'
+        command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name} --sfm-tool hloc --feature-type superpoint_aachen --matcher-type superglue'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         os.abort()

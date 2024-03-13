@@ -91,7 +91,10 @@ def main(args):
     
     data_url = f'{base}/data/{name}/{data}'
     # ns-process-data
-    command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
+    if args.sfm == 'colmap':
+        command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
+    elif args.sfm == 'hloc':
+        command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name} --sfm-tool hloc --feature-type superpoint_aachen --matcher-type superglue'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
@@ -142,17 +145,20 @@ def main(args):
     status("progress", msg, args.id)
 
     # ns-export
-    command = f'ns-export pointcloud \
+    command = f'ns-export poisson \
     --load-config {output_dir}/config.yml \
-    --output-dir {output_dir}/exports/pcd_10000000_s_20/ \
+    --output-dir {output_dir}/exports/poisson_s_15/ \
+    --save-point-cloud True \
+    --texture-method point_cloud \
+    --target-num-faces 1000000 \
+    --num-pixels-per-side 2048 \
     --num-points 10000000 \
     --remove-outliers True \
     --normal-method open3d \
     --use_bounding_box True \
-    --save-world-frame False \
     --obb_center 0.0000000000 0.0000000000 0.0000000000 \
     --obb_rotation 0.0000000000 0.0000000000 0.0000000000 \
-    --obb_scale 20.0000000000 20.0000000000 20.0000000000'
+    --obb_scale 15.0000000000 15.0000000000 15.0000000000'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
@@ -163,12 +169,32 @@ def main(args):
     print("Point cloud exported!")
     print(f"Elapsed time: {timedelta(seconds=time.time() - start)}")
 
+    # pcd
+    command = f'python nerfstudio/planedet.py \
+    --sparse {base}/data/{name}/sparse_pc.ply \
+    --dense {output_dir}/exports/poisson_s_15/point_cloud.ply \
+    --json {output_dir}/dataparser_transforms.json \
+    --output {output_dir}/exports/poisson_s_15/point_cloud_det.ply'
+    # # mesh
+    # command = f'python nerfstudio/planedet.py \
+    # --sparse {base}/data/{name}/sparse_pc.ply \
+    # --dense {output_dir}/exports/poisson_s_15/poisson_d_10.ply \
+    # --json {output_dir}/dataparser_transforms.json \
+    # --output {output_dir}/exports/poisson_s_15/poisson_det.ply'
+    s = sp.run(command, capture_output=False, text=True, shell=True)
+    if s.returncode != 0:
+        status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        s = sp.run(command, capture_output=False, text=True, shell=True)
+        os.abort()
+
     msg = '공간 재구성이 완료되었습니다! 재구성 결과를 서버에 업로드 중입니다.'
     status("progress", msg, args.id)
 
     print("web server로 전송 중")
     send_start = time.time()
-    result = upload(name, f'{output_dir}/exports/pcd_10000000_s_20/point_cloud.ply', args.id)
+    result = upload(name, f'{output_dir}/exports/poisson_s_15/point_cloud_det.ply', args.id)  # pcd
+    # result = upload(name, f'{output_dir}/exports/poisson_s_15/poisson_det.ply', args.id)        # mesh
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
         status("progress", "업로드가 완료되었습니다.", args.id)
@@ -202,6 +228,10 @@ if __name__ == "__main__":
                         type=str, 
                         help='(Required) model.',
                         default="nerfacto")
+    parser.add_argument('--sfm',
+                        type=str, 
+                        help='sfm.',
+                        default="colmap")
 
     # Parse arguments
     args = parser.parse_args()
