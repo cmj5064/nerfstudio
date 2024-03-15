@@ -7,65 +7,94 @@ import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import subprocess as sp
 import sys
-import wget
+from loguru import logger
+
+from google.cloud import storage
+from google.oauth2 import service_account
+from mysql.connector import Error
+import mysql
 
 
-def upload(name, file, id):
-    url = "https://zzimkong.ggm.kr/inference/upload"
-    ply_file = MultipartEncoder(
-        fields={
-            'file': (f'{name}.ply', open(file, 'rb')),
-            'id': str(id)
-        }
-    )
-    headers = {'Content-Type' : ply_file.content_type,
-               "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"
-    }              # multipart/form-data
-    r = requests.post(url, headers=headers, data=ply_file, verify=False)
-    return r.status_code
+def changeStatus(status, message, id, store_file_url = None, thumbnail_file_url = None):
+    connection = None
+    
+    try:
+        connection = mysql.connector.connect(
+            host='34.64.235.32',
+            database='ZZIMKONG',
+            user='root',
+            password='NewSt@rt!70'
+        )
+
+        if connection.is_connected():
+            if(store_file_url == None and thumbnail_file_url == None):
+                insert_query = f"UPDATE space_model_result SET status_code = '{status}', status_message = '{message}' WHERE message_id = {id};"
+            elif(store_file_url != None):
+                insert_query = f"UPDATE space_model_result SET status_code = '{status}', status_message = '{message}', store_file_url = '{store_file_url}' WHERE message_id = {id};"
+            elif(thumbnail_file_url != None):
+                insert_query = f"UPDATE space_model_result SET thumbnail_file_url = '{thumbnail_file_url}' WHERE message_id = {id};"
+                
+            cursor = connection.cursor()
+            cursor.execute(insert_query)
+            connection.commit()
+            print("space_model_result 테이블에 메시지를 입력하였습니다.")
+
+    except Error as e:
+        print("MySQL에 연결되지 않았습니다.", e)
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결을 끊었습니다.")
 
 
-def thumbnail(name, file, id):
-    url = "https://zzimkong.ggm.kr/inference/upload/thumbnail"
-    png_file = MultipartEncoder(
-        fields={
-            'file': (f'{name}.png', open(file, 'rb')),
-            'id': str(id)
-        }
-    )
-    headers = {'Content-Type' : png_file.content_type,
-               "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"
-    }              # multipart/form-data
-    r = requests.post(url, headers=headers, data=png_file, verify=False)
-    return r.status_code
+# 서비스 계정 인증 정보가 담긴 JSON 파일 경로
+KEY_PATH = "./nerfstudio/key/fluid-door-416807-4f432ced89bd.json"
+# Credentials 객체 생성
+credentials = service_account.Credentials.from_service_account_file(KEY_PATH)
 
 
-def status(status, message, id):
-    url = "https://zzimkong.ggm.kr/inference/status"
-    data = {"status": status, "statusMessage": message, "id": id}
-    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"}
-    r = requests.post(url, headers=headers, data=data, verify=False)
+def download_from_gcp(src, dest, file_name, bucket_name = "hsb-bucket"):
+    # Google Cloud Storage 클라이언트 객체 생성
+    storage_client = storage.Client(credentials = credentials, project = credentials.project_id)
+    
+    # 버킷 객체 생성
+    bucket = storage_client.bucket(bucket_name)
+    
+    # Blob 객체 생성 -> 버킷의 파일명을 선택
+    blob = bucket.blob("space/video/" + file_name)
+    
+    # 다운로드될 파일명
+    blob.download_to_filename(os.path.join(dest, file_name +".mp4"))
+
+    
+def upload_blob(src, dest, bucket_name = "hsb-bucket"):
+    """파일을 Google Cloud Storage 버킷에 업로드합니다."""
+    storage_client = storage.Client(credentials = credentials, project = credentials.project_id)
+    
+    bucket = storage_client.bucket(bucket_name)
+    
+    # 스토리지 명(space/ply/) + 저장될 파일 명
+    blob = bucket.blob(dest)
+    store_file_url = "https://storage.googleapis.com/hsb-bucket/" + dest
+    
+
+    # 로컬 파일
+    blob.upload_from_filename(src)
+    return store_file_url
+
 
 def main(args):
     start = time.time()
     msg = '업로드 된 공간 영상을 전처리 중입니다. \n\
     (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
-    status("progress", msg, args.id)
+    changeStatus("progress", msg, args.id)
 
     base = os.getcwd()
     if 'nerfstudio' not in base:
         base = f'{base}/nerfstudio'    # pwd output. ./nerfstudio
     model = args.model                 # nerfacto
-
-    # src로 url 들어올 시
-    # if "https:" in args.src:
-    #     data_url = args.src                # https://zzimkong.ggm.kr/2024.mov
-    #     data = data_url.split('/')[-1]     # room.mp4
-    #     name_0 = data.split('.')[0]        # room
-    # else:
-    #     data = args.src
-    #     data_url = f'{base}/data/{data}'
-    #     name_0 = data.split('.')[0]
 
     # UXR까지는 src로 url이 아닌 파일명만
     data_url = f'https://zzimkong.ggm.kr/inference/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
@@ -79,25 +108,30 @@ def main(args):
         name = f'{name_0}{str(uniq)}'
         uniq += 1
 
-    # TODO: ffmpeg pix_fmt none이라 url 사용 불가 / process_data_utils.py convert_video_to_images
-    # wget
+    # NOTE: ffmpeg에서 url 직접 사용 불가 / process_data_utils.py convert_video_to_images 참조
+    # 영상 다운로드
     if not os.path.exists(f'{base}/data/{name}'):
         os.mkdir(f'{base}/data/{name}')
-    # wget.download(data_url, f'{base}/data/{name}/{data}')
-    with open(f'{base}/data/{name}/{data}', "wb") as file:   # open in binary mode
-        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3MDkwMTE5NDIsImV4cCI6MTcxNzY1MTk0Mn0.GDqzeLFwWziLvFzRPNJ0AsJiy4l2UwzAy74Cg27wY5A"}
-        response = requests.get(data_url, headers=headers)               # get request
-        file.write(response.content)      # write to file#
+    download_from_gcp(src = data_url, dest = f'{base}/data/{name}', file_name = data)
     
-    data_url = f'{base}/data/{name}/{data}'
+    data_url = f'{base}/data/{name}/{data}.mp4'
+
+    # logging init 설정
+    logger.add(f'{base}/data/{name}/{name}.log')
+
+    # logging 전처리
+    start_process = time.time()
     # ns-process-data
     if args.sfm == 'colmap':
         command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name}'
     elif args.sfm == 'hloc':
         command = f'ns-process-data video --data {data_url} --output-dir {base}/data/{name} --sfm-tool hloc --feature-type superpoint_aachen --matcher-type superglue'
     s = sp.run(command, capture_output=False, text=True, shell=True)
+    elapsed_process = timedelta(seconds=time.time() - start_process)
+    logger.info(f'공간 영상 전처리에 {elapsed_process} 소요')
     if s.returncode != 0:
-        status("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
+        changeStatus("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
+        # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -106,6 +140,12 @@ def main(args):
     line = f.readline()
     f.close()
     get_matching_summary = line.split(']')[-1]
+    logger.info(f'공간 영상 전처리 결과: {get_matching_summary}')
+
+    f = open(f'{base}/data/{name}/colmap_result.txt', 'a')
+    f.write(f'Elapsed time: {elapsed_process}')
+    f.close()
+
     if "all" in get_matching_summary:
         matching = float(100)
     else:
@@ -116,7 +156,8 @@ def main(args):
         msg = f'{get_matching_summary} \n\
         전처리 수행 결과 학습 가능한 프레임이 전체의 {MATCHING_THRES}% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
         상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
-        status("error", msg, args.id)
+        changeStatus("error", msg, args.id)
+        # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -124,30 +165,39 @@ def main(args):
     msg = f'{get_matching_summary} \n\
     전처리가 완료되어 공간 학습을 진행 중입니다. \n\
     (학습에는 약 30분이 소요됩니다!)'
-    status("progress", msg, args.id)
+    thumbnail_file_url = upload_blob(
+        src = f'{base}/data/{name}/images/frame_00001.png',
+        dest = f'space/thumbnail/{data}.png'
+    )
+    changeStatus("progress", msg, args.id, thumbnail_file_url = thumbnail_file_url)
 
-    thumbnail(name, f'{base}/data/{name}/images/frame_00001.png', args.id)
-
+    # logging 학습
+    strat_train = time.time()
     # ns-train
     command = f'ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis tensorboard'
     s = sp.run(command, capture_output=False, text=True, shell=True)
+    elapsed_train = timedelta(seconds=time.time() - start_train)
+    logger.info(f'공간 모델 학습에 {elapsed_train} 소요')
     
     outs_dir=f"{base}/outputs/{name}/{model}/"
     output_dir = outs_dir + sorted(os.listdir(outs_dir))[-1]
 
     if s.returncode != 0:
-        status("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
+        changeStatus("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
+        # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
     msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
     (재구성에는 약 10분이 소요됩니다!)'
-    status("progress", msg, args.id)
+    changeStatus("progress", msg, args.id)
 
+    # logging 추출
+    start_export = time.time()
     # ns-export
     command = f'ns-export poisson \
     --load-config {output_dir}/config.yml \
-    --output-dir {output_dir}/exports/poisson_s_15/ \
+    --output-dir {output_dir}/exports/poisson_s_20/ \
     --save-point-cloud True \
     --texture-method point_cloud \
     --target-num-faces 1000000 \
@@ -158,53 +208,77 @@ def main(args):
     --use_bounding_box True \
     --obb_center 0.0000000000 0.0000000000 0.0000000000 \
     --obb_rotation 0.0000000000 0.0000000000 0.0000000000 \
-    --obb_scale 15.0000000000 15.0000000000 15.0000000000'
+    --obb_scale 20.0000000000 20.0000000000 20.0000000000'
     s = sp.run(command, capture_output=False, text=True, shell=True)
+    elapsed_export = timedelta(seconds=time.time() - start_export)
+    logger.info(f'공간 재구성 결과 추출에 {elapsed_export} 소요')
     if s.returncode != 0:
-        status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        changeStatus("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
     print("Point cloud exported!")
     print(f"Elapsed time: {timedelta(seconds=time.time() - start)}")
+    logger.info(f'전체 소요 시간: {timedelta(seconds=time.time() - start)}')
+    # TODO: log 파일 전송
 
     # pcd
     command = f'python nerfstudio/planedet.py \
     --sparse {base}/data/{name}/sparse_pc.ply \
-    --dense {output_dir}/exports/poisson_s_15/point_cloud.ply \
+    --dense {output_dir}/exports/poisson_s_20/point_cloud.ply \
     --json {output_dir}/dataparser_transforms.json \
-    --output {output_dir}/exports/poisson_s_15/point_cloud_det.ply'
+    --output {output_dir}/exports/poisson_s_20/point_cloud_det.ply'
     # # mesh
     # command = f'python nerfstudio/planedet.py \
     # --sparse {base}/data/{name}/sparse_pc.ply \
-    # --dense {output_dir}/exports/poisson_s_15/poisson_d_10.ply \
+    # --dense {output_dir}/exports/poisson_s_20/poisson_d_10.ply \
     # --json {output_dir}/dataparser_transforms.json \
-    # --output {output_dir}/exports/poisson_s_15/poisson_det.ply'
+    # --output {output_dir}/exports/poisson_s_20/poisson_det.ply'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
-        status("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        changeStatus("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
     msg = '공간 재구성이 완료되었습니다! 재구성 결과를 서버에 업로드 중입니다.'
-    status("progress", msg, args.id)
+    changeStatus("progress", msg, args.id)
 
     print("web server로 전송 중")
     send_start = time.time()
-    result = upload(name, f'{output_dir}/exports/poisson_s_15/point_cloud_det.ply', args.id)  # pcd
-    # result = upload(name, f'{output_dir}/exports/poisson_s_15/poisson_det.ply', args.id)        # mesh
-    if result == 201:
-        print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-        status("progress", "업로드가 완료되었습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-    else:
-        status("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
-        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-        s = sp.run(command, capture_output=False, text=True, shell=True)
-        os.abort()
+
+    # pcd
+    store_file_url = upload_blob(
+        src = f'{output_dir}/exports/poisson_s_20/point_cloud_det.ply',
+        dest = f'space/ply/{data}.ply'
+    )
+    #
+    # # mesh
+    # store_file_url = upload_blob(
+    #     src = f'{output_dir}/exports/poisson_s_20/poisson_det.ply',
+    #     dest = f'space/ply/{data}.ply'
+    # )
+    # #
+
+    print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
+    changeStatus("progress", "업로드가 완료되었습니다.", args.id, store_file_url)
+    command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
+    s = sp.run(command, capture_output=False, text=True, shell=True)
+    command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+    s = sp.run(command, capture_output=False, text=True, shell=True)
+
+    # if result == 201:
+    #     print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
+    #     changeStatus("progress", "업로드가 완료되었습니다.", args.id)
+    #     command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+    #     s = sp.run(command, capture_output=False, text=True, shell=True)
+    # else:
+    #     changeStatus("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
+    #     command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+    #     s = sp.run(command, capture_output=False, text=True, shell=True)
+    #     os.abort()
 
 
 if __name__ == "__main__":
