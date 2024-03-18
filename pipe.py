@@ -50,12 +50,12 @@ def changeStatus(status, message, id, store_file_url = None, thumbnail_file_url 
 
 
 # 서비스 계정 인증 정보가 담긴 JSON 파일 경로
-KEY_PATH = "./nerfstudio/key/fluid-door-416807-4f432ced89bd.json"
+KEY_PATH = "./nerfstudio/key/local-turbine-417512-1d12c5c178e1.json"
 # Credentials 객체 생성
 credentials = service_account.Credentials.from_service_account_file(KEY_PATH)
 
 
-def download_from_gcp(src, dest, file_name, bucket_name = "hsb-bucket"):
+def download_from_gcp(src, dest, file_name, bucket_name = "zzimkong-bucket"):
     # Google Cloud Storage 클라이언트 객체 생성
     storage_client = storage.Client(credentials = credentials, project = credentials.project_id)
     
@@ -69,20 +69,35 @@ def download_from_gcp(src, dest, file_name, bucket_name = "hsb-bucket"):
     blob.download_to_filename(os.path.join(dest, file_name +".mp4"))
 
     
-def upload_blob(src, dest, bucket_name = "hsb-bucket"):
+def upload_ply(src, dest, bucket_name = "zzimkong-bucket"):
+    """파일을 Google Cloud Storage 버킷에 업로드합니다."""
+    
+    try:
+        storage_client = storage.Client(credentials = credentials, project = credentials.project_id)
+        
+        bucket = storage_client.bucket(bucket_name)
+        
+        # 이게 스토리지 명(space/ply/) + 저장될 파일 명
+        blob = bucket.blob(f'space/ply/{dest}.ply')
+        
+        # 이게 로컬 파일
+        blob.upload_from_filename(src)
+        return 201
+    except GoogleCloudError as e:
+        return 500
+
+
+def upload_thumb(src, dest, bucket_name = "zzimkong-bucket"):
     """파일을 Google Cloud Storage 버킷에 업로드합니다."""
     storage_client = storage.Client(credentials = credentials, project = credentials.project_id)
     
     bucket = storage_client.bucket(bucket_name)
     
-    # 스토리지 명(space/ply/) + 저장될 파일 명
-    blob = bucket.blob(dest)
-    store_file_url = "https://storage.googleapis.com/hsb-bucket/" + dest
+    # 이게 스토리지 명(space/ply/) + 저장될 파일 명
+    blob = bucket.blob(f'space/thumbnail/{dest}.png')
     
-
-    # 로컬 파일
+    # 이게 로컬 파일
     blob.upload_from_filename(src)
-    return store_file_url
 
 
 def main(args):
@@ -165,7 +180,7 @@ def main(args):
     msg = f'{get_matching_summary} \n\
     전처리가 완료되어 공간 학습을 진행 중입니다. \n\
     (학습에는 약 30분이 소요됩니다!)'
-    thumbnail_file_url = upload_blob(
+    thumbnail_file_url = upload_thumb(
         src = f'{base}/data/{name}/images/frame_00001.png',
         dest = f'space/thumbnail/{data}.png'
     )
@@ -250,35 +265,28 @@ def main(args):
     send_start = time.time()
 
     # pcd
-    store_file_url = upload_blob(
+    result = upload_ply(
         src = f'{output_dir}/exports/poisson_s_20/point_cloud_det.ply',
         dest = f'space/ply/{data}.ply'
     )
     #
     # # mesh
-    # store_file_url = upload_blob(
+    # result = upload_blob(
     #     src = f'{output_dir}/exports/poisson_s_20/poisson_det.ply',
     #     dest = f'space/ply/{data}.ply'
     # )
     # #
 
-    print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-    changeStatus("progress", "업로드가 완료되었습니다.", args.id, store_file_url)
-    command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
-    s = sp.run(command, capture_output=False, text=True, shell=True)
-    command = f'chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-    s = sp.run(command, capture_output=False, text=True, shell=True)
-
-    # if result == 201:
-    #     print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-    #     changeStatus("progress", "업로드가 완료되었습니다.", args.id)
-    #     command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-    #     s = sp.run(command, capture_output=False, text=True, shell=True)
-    # else:
-    #     changeStatus("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
-    #     command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
-    #     s = sp.run(command, capture_output=False, text=True, shell=True)
-    #     os.abort()
+    if result == 201:
+        print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
+        changeStatus("progress", "업로드가 완료되었습니다.", args.id)
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        s = sp.run(command, capture_output=False, text=True, shell=True)
+    else:
+        changeStatus("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
+        command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
+        s = sp.run(command, capture_output=False, text=True, shell=True)
+        os.abort()
 
 
 if __name__ == "__main__":
