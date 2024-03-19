@@ -180,11 +180,11 @@ def main(args):
     msg = f'{get_matching_summary} \n\
     전처리가 완료되어 공간 학습을 진행 중입니다. \n\
     (학습에는 약 30분이 소요됩니다!)'
-    thumbnail_file_url = upload_thumb(
+    upload_thumb(
         src = f'{base}/data/{name}/images/frame_00001.png',
         dest = f'space/thumbnail/{data}.png'
     )
-    changeStatus("progress", msg, args.id, thumbnail_file_url = thumbnail_file_url)
+    changeStatus("progress", msg, args.id, thumbnail_file_url = "space/thumbnail" + data + ".png")
 
     # logging 학습
     strat_train = time.time()
@@ -239,18 +239,18 @@ def main(args):
     logger.info(f'전체 소요 시간: {timedelta(seconds=time.time() - start)}')
     # TODO: log 파일 전송
 
-    # pcd
-    command = f'python nerfstudio/planedet.py \
-    --sparse {base}/data/{name}/sparse_pc.ply \
-    --dense {output_dir}/exports/poisson_s_20/point_cloud.ply \
-    --json {output_dir}/dataparser_transforms.json \
-    --output {output_dir}/exports/poisson_s_20/point_cloud_det.ply'
-    # # mesh
+    # # pcd
     # command = f'python nerfstudio/planedet.py \
     # --sparse {base}/data/{name}/sparse_pc.ply \
-    # --dense {output_dir}/exports/poisson_s_20/poisson_d_10.ply \
+    # --dense {output_dir}/exports/poisson_s_20/point_cloud.ply \
     # --json {output_dir}/dataparser_transforms.json \
-    # --output {output_dir}/exports/poisson_s_20/poisson_det.ply'
+    # --output {output_dir}/exports/poisson_s_20/point_cloud_det.ply'
+    # mesh
+    command = f'python nerfstudio/planedet.py \
+    --sparse {base}/data/{name}/sparse_pc.ply \
+    --dense {output_dir}/exports/poisson_s_20/poisson_d_10.ply \
+    --json {output_dir}/dataparser_transforms.json \
+    --output {output_dir}/exports/poisson_s_20/poisson_det.ply'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
         changeStatus("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
@@ -264,22 +264,22 @@ def main(args):
     print("web server로 전송 중")
     send_start = time.time()
 
-    # pcd
-    result = upload_ply(
-        src = f'{output_dir}/exports/poisson_s_20/point_cloud_det.ply',
-        dest = f'space/ply/{data}.ply'
-    )
-    #
-    # # mesh
-    # result = upload_blob(
-    #     src = f'{output_dir}/exports/poisson_s_20/poisson_det.ply',
+    # # pcd
+    # result = upload_ply(
+    #     src = f'{output_dir}/exports/poisson_s_20/point_cloud_det.ply',
     #     dest = f'space/ply/{data}.ply'
     # )
     # #
+    # mesh
+    result = upload_ply(
+        src = f'{output_dir}/exports/poisson_s_20/poisson_det.ply',
+        dest = f'space/ply/{data}.ply'
+    )
+    #
 
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-        changeStatus("progress", "업로드가 완료되었습니다.", args.id)
+        changeStatus("progress", "업로드가 완료되었습니다.", args.id, store_file_url = "space/ply/" + data + ".ply")
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
     else:
