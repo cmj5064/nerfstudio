@@ -182,9 +182,9 @@ def main(args):
     (학습에는 약 30분이 소요됩니다!)'
     upload_thumb(
         src = f'{base}/data/{name}/images/frame_00001.png',
-        dest = f'space/thumbnail/{data}.png'
+        dest = data
     )
-    changeStatus("PROCESSING", msg, args.id, thumbnail_file_url = "space/thumbnail" + data + ".png")
+    changeStatus("PROCESSING", msg, args.id, thumbnail_file_url = "space/thumbnail/" + data + ".png")
 
     # logging 학습
     start_train = time.time()
@@ -267,13 +267,13 @@ def main(args):
     # # pcd
     # result = upload_ply(
     #     src = f'{output_dir}/exports/poisson_s_20/point_cloud_det.ply',
-    #     dest = f'space/ply/{data}.ply'
+    #     dest = data
     # )
     # #
     # mesh
     result = upload_ply(
         src = f'{output_dir}/exports/poisson_s_20/poisson_det.ply',
-        dest = f'space/ply/{data}.ply'
+        dest = data
     )
     #
 
