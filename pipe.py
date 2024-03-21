@@ -187,7 +187,7 @@ def main(args):
     changeStatus("PROCESSING", msg, args.id, thumbnail_file_url = "space/thumbnail" + data + ".png")
 
     # logging 학습
-    strat_train = time.time()
+    start_train = time.time()
     # ns-train
     command = f'ns-train {model} --data {base}/data/{name} --output-dir {base}/outputs --pipeline.model.predict-normals True --vis tensorboard'
     s = sp.run(command, capture_output=False, text=True, shell=True)
