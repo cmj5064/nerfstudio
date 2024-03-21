@@ -248,7 +248,7 @@ def main(args):
     # mesh
     command = f'python nerfstudio/planedet.py \
     --sparse {base}/data/{name}/sparse_pc.ply \
-    --dense {output_dir}/exports/poisson_s_20/poisson_d_10.ply \
+    --dense {output_dir}/exports/poisson_s_20/poisson_mesh_d_10.ply \
     --json {output_dir}/dataparser_transforms.json \
     --output {output_dir}/exports/poisson_s_20/poisson_det.ply'
     s = sp.run(command, capture_output=False, text=True, shell=True)
