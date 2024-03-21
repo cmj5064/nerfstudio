@@ -122,7 +122,7 @@ def main(args):
     
     if 'point' in args.dense:
         pcd_dense = o3d.io.read_point_cloud(args.dense)
-    elif 'mesh' in args.dense:
+    elif 'poisson' in args.dense:
         pcd_dense = o3d.io.read_triangle_mesh(args.dense)
     pcd_dense.transform(transform_matrix)
     
@@ -131,7 +131,7 @@ def main(args):
     
     if 'point' in args.dense:
         o3d.io.write_point_cloud(args.output, pcd_dense, write_ascii=True)
-    elif 'mesh' in args.dense:
+    elif 'poisson' in args.dense:
         o3d.io.write_triangle_mesh(args.output, pcd_dense, write_ascii=True)
 
 if __name__ == '__main__':
