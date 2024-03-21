@@ -104,7 +104,7 @@ def main(args):
     start = time.time()
     msg = '업로드 된 공간 영상을 전처리 중입니다. \n\
     (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
-    changeStatus("progress", msg, args.id)
+    changeStatus("PROCESSING", msg, args.id)
 
     base = os.getcwd()
     if 'nerfstudio' not in base:
@@ -145,7 +145,7 @@ def main(args):
     elapsed_process = timedelta(seconds=time.time() - start_process)
     logger.info(f'공간 영상 전처리에 {elapsed_process} 소요')
     if s.returncode != 0:
-        changeStatus("error", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
+        changeStatus("ERROR", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
         # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
@@ -171,7 +171,7 @@ def main(args):
         msg = f'{get_matching_summary} \n\
         전처리 수행 결과 학습 가능한 프레임이 전체의 {MATCHING_THRES}% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
         상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
-        changeStatus("error", msg, args.id)
+        changeStatus("ERROR", msg, args.id)
         # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
@@ -184,7 +184,7 @@ def main(args):
         src = f'{base}/data/{name}/images/frame_00001.png',
         dest = f'space/thumbnail/{data}.png'
     )
-    changeStatus("progress", msg, args.id, thumbnail_file_url = "space/thumbnail" + data + ".png")
+    changeStatus("PROCESSING", msg, args.id, thumbnail_file_url = "space/thumbnail" + data + ".png")
 
     # logging 학습
     strat_train = time.time()
@@ -198,14 +198,14 @@ def main(args):
     output_dir = outs_dir + sorted(os.listdir(outs_dir))[-1]
 
     if s.returncode != 0:
-        changeStatus("error", "공간 학습 중 문제가 발생하였습니다.", args.id)
+        changeStatus("ERROR", "공간 학습 중 문제가 발생하였습니다.", args.id)
         # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
     msg = '공간 학습이 완료되어 공간 재구성을 진행 중 입니다. \n\
     (재구성에는 약 10분이 소요됩니다!)'
-    changeStatus("progress", msg, args.id)
+    changeStatus("PROCESSING", msg, args.id)
 
     # logging 추출
     start_export = time.time()
@@ -228,7 +228,7 @@ def main(args):
     elapsed_export = timedelta(seconds=time.time() - start_export)
     logger.info(f'공간 재구성 결과 추출에 {elapsed_export} 소요')
     if s.returncode != 0:
-        changeStatus("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        changeStatus("ERROR", "공간 재구성 중 문제가 발생하였습니다.", args.id)
         # TODO: log 파일 전송
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
@@ -253,13 +253,13 @@ def main(args):
     --output {output_dir}/exports/poisson_s_20/poisson_det.ply'
     s = sp.run(command, capture_output=False, text=True, shell=True)
     if s.returncode != 0:
-        changeStatus("error", "공간 재구성 중 문제가 발생하였습니다.", args.id)
+        changeStatus("ERROR", "공간 재구성 중 문제가 발생하였습니다.", args.id)
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
 
     msg = '공간 재구성이 완료되었습니다! 재구성 결과를 서버에 업로드 중입니다.'
-    changeStatus("progress", msg, args.id)
+    changeStatus("PROCESSING", msg, args.id)
 
     print("web server로 전송 중")
     send_start = time.time()
@@ -279,11 +279,11 @@ def main(args):
 
     if result == 201:
         print(f"전송 완료. Elapsed time: {timedelta(seconds=time.time() - send_start)}")
-        changeStatus("progress", "업로드가 완료되었습니다.", args.id, store_file_url = "space/ply/" + data + ".ply")
+        changeStatus("PROCESSING", "업로드가 완료되었습니다.", args.id, store_file_url = "space/ply/" + data + ".ply")
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
     else:
-        changeStatus("error", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
+        changeStatus("ERROR", "재구성 결과 업로드 중 문제가 발생하였습니다.", args.id)
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
