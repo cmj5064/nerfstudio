@@ -1,7 +1,7 @@
 import argparse
 import os
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -15,7 +15,7 @@ from mysql.connector import Error
 import mysql
 
 
-def changeStatus(status, message, id, store_file_url = None, thumbnail_file_url = None):
+def changeStatus(status, message, id, store_file_url = None, thumbnail_file_url = None, infer_start_time = None, infer_end_time = None):
     connection = None
     
     try:
@@ -33,6 +33,10 @@ def changeStatus(status, message, id, store_file_url = None, thumbnail_file_url 
                 insert_query = f"UPDATE space_model_result SET status_code = '{status}', status_message = '{message}', store_file_url = '{store_file_url}' WHERE message_id = {id};"
             elif(thumbnail_file_url != None):
                 insert_query = f"UPDATE space_model_result SET thumbnail_file_url = '{thumbnail_file_url}' WHERE message_id = {id};"
+            elif(infer_start_time != None):
+                insert_query = f"UPDATE space_model_result SET learned_date = '{infer_start_time}' WHERE message_id = {id};"
+            elif(infer_end_time != None):
+                insert_query = f"UPDATE space_model_result SET finished_date = '{infer_end_time}' WHERE message_id = {id};"
                 
             cursor = connection.cursor()
             cursor.execute(insert_query)
@@ -100,11 +104,46 @@ def upload_thumb(src, dest, bucket_name = "zzimkong-bucket"):
     blob.upload_from_filename(src)
 
 
+def save_log(args, log_dir):
+    # mysql 연결
+    connection = None
+    try:
+        connection = mysql.connector.connect(
+            host='34.64.80.157',
+            database='ZZIMKONG',
+            user='root',
+            password='NewSt@rt!70'
+        )
+    except Error as e:
+        print("Log MySQL에 연결하는 동안 오류가 발생했습니다:", e)
+        return None
+    
+    # 로그 추출
+    all_texts = []
+    with open(log_dir, 'r', encoding='utf-8') as file: # log 파일 경로
+        for line in file:
+            log_text = line.split('-')[-1].strip()
+            all_texts.append(log_text)
+    combined_text = '\n'.join(all_texts)
+    
+    # mysql에 저장    
+    try:
+        cursor = connection.cursor()
+        query = "INSERT INTO space_log (message_id, text) VALUES (%s, %s)"
+        cursor.execute(query, (args.id, combined_text)) # 메세지 id, 로그 텍스트
+        connection.commit()
+        print("로그 레코드가 성공적으로 저장되었습니다.")
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print("log를 데이터베이스에 저장하는 도중 오류가 발생했습니다:", e)
+
+
 def main(args):
     start = time.time()
     msg = '업로드 된 공간 영상을 전처리 중입니다. \n\
     (전처리에는 약 30분이 소요됩니다!)'    # user에게 보여줄 메시지
-    changeStatus("PROCESSING", msg, args.id)
+    changeStatus("PROCESSING", msg, args.id, infer_start_time=str(datetime.now()))
 
     base = os.getcwd()
     if 'nerfstudio' not in base:
@@ -146,7 +185,7 @@ def main(args):
     logger.info(f'공간 영상 전처리에 {elapsed_process} 소요')
     if s.returncode != 0:
         changeStatus("ERROR", "공간 영상 전처리 중 문제가 발생하였습니다.", args.id)
-        # TODO: log 파일 전송
+        save_log(args, f'{base}/data/{name}/{name}.log')
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -172,7 +211,7 @@ def main(args):
         전처리 수행 결과 학습 가능한 프레임이 전체의 {MATCHING_THRES}% 미만으로 공간 재구성을 진행하기 어렵습니다. \n\
         상세 가이드를 읽고 촬영을 한번 더 시도해주세요. 촬영과 관련된 문의는 고지된 링크로 해주시면 감사하겠습니다.'
         changeStatus("ERROR", msg, args.id)
-        # TODO: log 파일 전송
+        save_log(args, f'{base}/data/{name}/{name}.log')
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -199,7 +238,7 @@ def main(args):
 
     if s.returncode != 0:
         changeStatus("ERROR", "공간 학습 중 문제가 발생하였습니다.", args.id)
-        # TODO: log 파일 전송
+        save_log(args, f'{base}/data/{name}/{name}.log')
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -229,7 +268,7 @@ def main(args):
     logger.info(f'공간 재구성 결과 추출에 {elapsed_export} 소요')
     if s.returncode != 0:
         changeStatus("ERROR", "공간 재구성 중 문제가 발생하였습니다.", args.id)
-        # TODO: log 파일 전송
+        save_log(args, f'{base}/data/{name}/{name}.log')
         command = f'chmod -R a+x {base}/data/{name} && rm -rf {base}/data/{name} && chmod -R a+x {base}/outputs/{name} && rm -rf {base}/outputs/{name}'
         s = sp.run(command, capture_output=False, text=True, shell=True)
         os.abort()
@@ -237,7 +276,7 @@ def main(args):
     print("Point cloud exported!")
     print(f"Elapsed time: {timedelta(seconds=time.time() - start)}")
     logger.info(f'전체 소요 시간: {timedelta(seconds=time.time() - start)}')
-    # TODO: log 파일 전송
+    save_log(args, f'{base}/data/{name}/{name}.log')
 
     # # pcd
     # command = f'python nerfstudio/planedet.py \
