@@ -150,9 +150,10 @@ def main(args):
         base = f'{base}/nerfstudio'    # pwd output. ./nerfstudio
     model = args.model                 # nerfacto
 
-    # UXR까지는 src로 url이 아닌 파일명만
-    data_url = f'https://zzimkong.ggm.kr/inference/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
-    data = data_url.split('/')[-1]                                  # room.mp4
+    # data_url = f'https://zzimkong.ggm.kr/inference/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
+    # data = data_url.split('/')[-1]                                  # room.mp4
+    data_url = args.src
+    data = args.src
     name_0 = data.split('.')[0]                                     # room
 
     name = name_0
