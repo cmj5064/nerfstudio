@@ -151,9 +151,8 @@ def main(args):
     model = args.model                 # nerfacto
 
     # data_url = f'https://zzimkong.ggm.kr/inference/{args.src}'                # https://zzimkong.ggm.kr/2024.mov
-    # data = data_url.split('/')[-1]                                  # room.mp4
     data_url = args.src
-    data = args.src
+    data = data_url.split('/')[-1]                                  # room.mp4
     name_0 = data.split('.')[0]                                     # room
 
     name = name_0
